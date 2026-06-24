@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>玄枢命盘</title>
+    <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero" aria-label="八字神煞排盘">
+        <div class="hero__image" aria-hidden="true"></div>
+        <div class="hero__shade" aria-hidden="true"></div>
+        <div class="hero__content">
+          <p class="kicker">BaZi Shen Sha</p>
+          <h1>玄枢命盘</h1>
+          <p class="intro">输入生辰资料，生成四柱、五行与常见神煞简析。</p>
+        </div>
+      </section>
+
+      <section class="workspace" aria-label="排盘工作区">
+        <form id="birthForm" class="panel form-panel">
+          <div class="panel__head">
+            <h2>生辰资料</h2>
+            <div class="head-actions">
+              <button class="ghost-button" type="button" id="newRecordBtn">新增</button>
+              <button class="ghost-button" type="button" id="sampleBtn">示例</button>
+            </div>
+          </div>
+
+          <label class="field">
+            <span>姓名</span>
+            <input id="userName" name="userName" type="text" placeholder="如：张明" autocomplete="name" required />
+          </label>
+
+          <div class="field-grid">
+            <label class="field">
+              <span>性别</span>
+              <select id="gender" name="gender" required>
+                <option value="男">男</option>
+                <option value="女">女</option>
+                <option value="其他">其他</option>
+              </select>
+            </label>
+
+            <label class="field">
+              <span>出生地</span>
+              <input id="birthPlace" name="birthPlace" type="text" placeholder="如：香港" />
+            </label>
+          </div>
+
+          <div class="field-grid">
+            <label class="field">
+              <span>出生日期</span>
+              <input id="birthDate" name="birthDate" type="date" required />
+            </label>
+
+            <label class="field">
+              <span>出生时间</span>
+              <input id="birthTime" name="birthTime" type="time" required />
+            </label>
+          </div>
+
+          <button class="primary-button" type="submit">
+            <span>排盘分析</span>
+          </button>
+
+          <p class="notice">民俗文化参考版：节气采用近似切换，专业排盘请结合精确历法与真太阳时。</p>
+
+          <section class="record-panel" aria-label="已保存命盘">
+            <div class="record-panel__head">
+              <h3>保存记录</h3>
+              <span id="recordCount">0人</span>
+            </div>
+            <div id="recordList" class="record-list">
+              <p class="muted">排盘后自动保存到这里。</p>
+            </div>
+          </section>
+        </form>
+
+        <section class="results" aria-live="polite">
+          <div class="panel summary-panel">
+            <p class="eyebrow">命盘摘要</p>
+            <h2 id="summaryTitle">等待排盘</h2>
+            <p id="summaryText">填写左侧资料后，这里会显示四柱与基础倾向。</p>
+          </div>
+
+          <div class="pillar-grid" id="pillarGrid">
+            <article class="pillar-card empty">
+              <span>年柱</span>
+              <strong>--</strong>
+              <small>祖上 / 早年</small>
+            </article>
+            <article class="pillar-card empty">
+              <span>月柱</span>
+              <strong>--</strong>
+              <small>环境 / 青年</small>
+            </article>
+            <article class="pillar-card empty">
+              <span>日柱</span>
+              <strong>--</strong>
+              <small>日主 / 自我</small>
+            </article>
+            <article class="pillar-card empty">
+              <span>时柱</span>
+              <strong>--</strong>
+              <small>志向 / 晚景</small>
+            </article>
+          </div>
+
+          <section class="panel">
+            <div class="panel__head">
+              <h2>四项评分</h2>
+            </div>
+            <div id="scorePanel" class="score-grid">
+              <p class="muted">排盘后显示桃花、事业、财运、健康评分。</p>
+            </div>
+          </section>
+
+          <div class="lower-grid">
+            <section class="panel">
+              <div class="panel__head">
+                <h2>五行分布</h2>
+              </div>
+              <div id="elementBars" class="element-bars"></div>
+            </section>
+
+            <section class="panel">
+              <div class="panel__head">
+                <h2>命中神煞</h2>
+              </div>
+              <div id="shenShaList" class="tag-list">
+                <span class="muted">待生成</span>
+              </div>
+            </section>
+          </div>
+
+          <section class="panel">
+            <div class="panel__head">
+              <h2>简析</h2>
+            </div>
+            <div id="analysisText" class="analysis">
+              <p>排盘后将从日主、五行偏重、神煞意象三个角度给出简要分析。</p>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel__head">
+              <h2>大运流年</h2>
+              <div id="topicTabs" class="topic-tabs" role="tablist" aria-label="分析维度">
+                <button type="button" class="topic-tab is-active" data-topic="career">事业</button>
+                <button type="button" class="topic-tab" data-topic="health">健康</button>
+                <button type="button" class="topic-tab" data-topic="romance">桃花</button>
+                <button type="button" class="topic-tab" data-topic="wealth">财运</button>
+              </div>
+            </div>
+            <div id="fortunePanel" class="fortune-panel">
+              <p class="muted">排盘后显示起运、当前大运与近年流年。</p>
+            </div>
+          </section>
+        </section>
+      </section>
+    </main>
+
+    <script src="./script.js"></script>
+  </body>
+</html>
