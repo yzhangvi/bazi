@@ -482,7 +482,7 @@ function analyze(chart, profile, fortune) {
       title: "神煞落柱",
       paragraphs: [
         `本盘命中神煞为${shen}。神煞不是单独断吉凶的按钮，要看它落在哪一柱：年柱看外缘与早年，月柱看成长环境和事业根基，日柱看自身与亲密关系，时柱看志向、作品、子女和晚景。`,
-        ...buildPillarShenInsights(chart)
+        ...buildPillarShenInsights(chart, fortune, meta)
       ]
     },
     {
@@ -500,7 +500,7 @@ function analyze(chart, profile, fortune) {
   ];
 }
 
-function buildPillarShenInsights(chart) {
+function buildPillarShenInsights(chart, fortune, meta = getChartMeta(chart)) {
   return PILLAR_NAMES.map((pillarName) => {
     const items = chart.shenSha
       .filter((item) => item.hitDetails.some((hit) => hit.pillar === pillarName))
@@ -511,10 +511,124 @@ function buildPillarShenInsights(chart) {
           .join("、");
         return { ...item, hitParts };
       });
-    if (!items.length) return `${pillarName}柱（${PILLAR_MEANINGS[pillarName]}）未见主要神煞，解读时以干支五行为主。`;
-    const detail = items.map((item) => `${item.name}落${hitPartsText(item.hitParts)}，${trimEndingPunctuation(item.note)}`).join("；");
-    return `${pillarName}柱（${PILLAR_MEANINGS[pillarName]}）见${items.map((item) => item.name).join("、")}。${detail}。这一柱被触发时，相关人事与阶段主题会更明显。`;
+    const pillar = chart.pillars[PILLAR_KEYS[PILLAR_NAMES.indexOf(pillarName)]];
+    const stemRole = relationToDay(meta.dayElement, ELEMENT_OF_STEM[pillar.stem]);
+    const branchRole = relationToDay(meta.dayElement, ELEMENT_OF_BRANCH[pillar.branch]);
+    const pillarContext = `${pillarName}柱为${pillar.label}，天干${pillar.stem}属${ELEMENT_OF_STEM[pillar.stem]}、对日主是${stemRole}，地支${pillar.branch}属${ELEMENT_OF_BRANCH[pillar.branch]}、对日主是${branchRole}。`;
+    if (!items.length) return `${pillarName}柱（${PILLAR_MEANINGS[pillarName]}）未见主要神煞。${pillarContext}${pillarNoShenAdvice(pillarName, [stemRole, branchRole], meta)}`;
+    const detail = items
+      .map((item) => `${item.name}落${hitPartsText(item.hitParts)}，${shenShaContextText(item, chart, meta, fortune, { pillarName, compact: true })}`)
+      .join("；");
+    return `${pillarName}柱（${PILLAR_MEANINGS[pillarName]}）见${items.map((item) => item.name).join("、")}。${pillarContext}${detail}`;
   });
+}
+
+function pillarNoShenAdvice(pillarName, roles, meta) {
+  const roleText = [...new Set(roles)].map((role) => roleFocusText(role)).join("；");
+  const stageText = {
+    年: "外部环境和早年机会",
+    月: "成长方式、专业根基和事业入口",
+    日: "自我选择、亲密关系和日常决策",
+    时: "长期目标、作品成果和后期发展"
+  }[pillarName];
+  return `${stageText}主要看十神和五行：${roleText}。命局${meta.strength}，此处宜围绕喜用${meta.useful.join("、")}来取舍。`;
+}
+
+function shenShaContextText(item, chart, meta = getChartMeta(chart), fortune = null, options = {}) {
+  const hits = item.hitDetails.map((hit) => {
+    const key = PILLAR_KEYS[PILLAR_NAMES.indexOf(hit.pillar)];
+    const pillar = chart.pillars[key];
+    const element = hit.part === "干" ? ELEMENT_OF_STEM[pillar.stem] : ELEMENT_OF_BRANCH[pillar.branch];
+    const role = relationToDay(meta.dayElement, element);
+    return { ...hit, pillarKey: key, pillar, element, role };
+  });
+  const hitPillars = [...new Set(hits.map((hit) => hit.pillar))];
+  const roles = [...new Set(hits.map((hit) => hit.role))];
+  const elements = [...new Set(hits.map((hit) => hit.element))];
+  const usefulHits = elements.filter((element) => meta.useful.includes(element));
+  const topHits = elements.filter((element) => element === meta.top);
+  const lowHits = elements.filter((element) => element === meta.low);
+  const stageText = hitPillars.map((pillar) => `${pillar}柱主${PILLAR_MEANINGS[pillar]}`).join("；");
+  const roleText = roles.map((role) => roleFocusText(role)).join("；");
+  const elementText = `落点五行为${elements.join("、")}，对${chart.pillars.day.stem}${meta.dayElement}日主表现为${roles.join("、")}。`;
+  const usefulText = usefulHits.length
+    ? `其中${[...new Set(usefulHits)].join("、")}属于此盘参考喜用，说明这个神煞的正面作用更容易被用出来。`
+    : `它没有直接落在喜用${meta.useful.join("、")}上，发挥时更要靠现实计划和后天经营来承接。`;
+  const balanceText = [
+    topHits.length ? `同时触及命局偏重的${meta.top}，容易把原本的性格或事件主题放大，宜防过度。` : "",
+    lowHits.length ? `也触及命局较弱的${meta.low}，提示这部分能力可以补，但需要慢慢养成。` : ""
+  ].filter(Boolean).join("");
+  const timingText = shenShaTimingText(item, fortune);
+  const themeText = shenShaThemeText(item.name, hits, meta);
+  const compactPrefix = options.compact ? "" : `${stageText}。${elementText}`;
+  return `${compactPrefix}${themeText}${roleText ? `结合十神看，${roleText}。` : ""}${usefulText}${balanceText}${timingText}`;
+}
+
+function shenShaThemeText(name, hits, meta) {
+  const hasBranch = hits.some((hit) => hit.part === "支");
+  const hasStem = hits.some((hit) => hit.part === "干");
+  const groundText = hasBranch ? "落在地支，重点不是表面声势，而是实际人事、环境和长期承接。" : "";
+  const visibleText = hasStem ? "落在天干，表现会更外显，容易被别人看见或评价。" : "";
+  const common = `${visibleText}${groundText}`;
+  const textMap = {
+    天乙贵人: "贵人不等于坐等帮助，本盘要把问题说清楚、把合作边界立住，助力才容易出现。",
+    太极贵人: "悟性和抽象理解力较强，适合研究体系、技术、命理、哲学或需要耐心推演的内容。",
+    天德贵人: "有缓和矛盾、逢凶化缓的倾向，但前提是行事守规矩、少走极端。",
+    月德贵人: "人情缓冲和合作缘较好，越能保持温和可信，越容易得到回旋空间。",
+    福星贵人: "生活助力和口碑缘较明显，适合把稳定资源经营成长期底盘。",
+    天官贵人: "重名誉、职位和规则，适合通过制度、资质、头衔或专业身份获得认可。",
+    天福贵人: "长辈缘、照拂和稳定资源较容易出现，适合稳中求进。",
+    德秀贵人: "审美、修养和专业细节是优势，适合把能力打磨得精致、有作品感。",
+    文昌贵人: "学习、表达、考试和文字策划是发力点，越系统输出越能见成果。",
+    国印贵人: "适合走证书、制度、管理、公信力路线，重要文件和规则意识要做扎实。",
+    学堂: "学习吸收和经验传承能力较好，适合建立自己的知识框架。",
+    天厨贵人: "与饮食、照料、生活品质和服务体验有关，可转化为审美、照护或生活型资源。",
+    禄神: "有根基和资源意识，适合稳扎稳打，不宜只追短期刺激。",
+    羊刃: "行动力强，遇事敢冲，但也容易硬碰硬，要把力气放到训练、执行和边界管理上。",
+    金舆: "重体面、承载和资源配置，适合稳健积累与提升生活品质。",
+    暗禄: "资源常在暗处，不一定一开始就显现，适合低调积累、人脉维护和长期经营。",
+    桃花: "人缘、审美和吸引力较明显，但要看是否能被夫妻宫和现实责任承接。",
+    红艳: "个人魅力和情感吸引强，选择关系时要慢一点，避免被短期热度牵着走。",
+    流霞: "情绪、人际口舌或感情波动较容易被放大，重要沟通宜留证据、少冲动。",
+    红鸾: "喜庆与关系机会较容易出现，适合自然推进，不宜急着定性。",
+    天喜: "社交热度和好消息较容易被触发，利公开表达、合作和喜事安排。",
+    驿马: "动象明显，适合迁动、出差、跨城市或跨领域发展，但要先定好节奏。",
+    华盖: "专注、审美和研究能力强，也容易显得孤高，适合把独处变成作品。",
+    将星: "组织力和掌控意识较强，适合承担责任、带项目或做关键决策。",
+    亡神: "心思深、敏感度高，适合研究和洞察，但要防过度内耗。",
+    劫煞: "竞争、突发和抢夺感较强，投资、合伙、冲动决策要留余地。",
+    灾煞: "风险提示较明显，流程、健康、安全和合规要比平时更重视。",
+    孤辰: "独立性强，适合深度专注；关系里要主动表达需求，别让别人全靠猜。",
+    寡宿: "情感表达偏收敛，容易慢热或保持距离，亲密关系需要更多沟通。",
+    天医: "健康意识、照护能力和修复力较明显，适合规律养护或从事照护服务类事务。",
+    天罗地网: "容易有被事务缠住、被规则限制的感觉，适合拆小问题、一步步处理。",
+    空亡: `空亡落地支时，重点是“期待和现实承接之间有落差”，不是简单断坏。此盘日主${meta.strength}，要看它空在哪一柱、是否碰到喜用，以及有没有大运流年来填实；若落到喜用，常表现为想要的资源来得慢，需要靠计划补上；若落到忌性偏重处，反而能减轻一部分压力。`
+  };
+  return `${common}${textMap[name] || trimEndingPunctuation(SHEN_SHA.find((item) => item.name === name)?.note || "")}。`;
+}
+
+function shenShaTimingText(item, fortune) {
+  if (!fortune) return "";
+  const checks = [
+    fortune.currentLuck ? ["当前大运", fortune.currentLuck.pillar] : null,
+    fortune.currentAnnual ? [`${fortune.currentAnnual.year}流年`, fortune.currentAnnual.pillar] : null
+  ].filter(Boolean);
+  const triggered = checks
+    .filter(([, pillar]) => item.targets.stems.includes(pillar.stem) || item.targets.branches.includes(pillar.branch))
+    .map(([label, pillar]) => `${label}${pillar.label}`);
+  return triggered.length
+    ? `当前${triggered.join("、")}又触到这个神煞，相关主题近期会更容易被看见，需要主动安排，而不是等事情自然变好。`
+    : "";
+}
+
+function roleFocusText(role) {
+  return {
+    比劫: "比劫代表自我、同辈和竞争，宜用在协作与执行，少陷入逞强",
+    印星: "印星代表学习、贵人、资质和保护，宜补方法、证书、知识体系",
+    食伤: "食伤代表表达、作品、技能输出和创意，宜把想法落成成果",
+    财星: "财星代表资源、客户、金钱和现实承接，宜重视预算与交换价值",
+    官杀: "官杀代表规则、责任、压力和职位，宜建立边界、流程和长期目标"
+  }[role] || "";
 }
 
 function trimEndingPunctuation(text) {
@@ -961,26 +1075,28 @@ function renderScores(scores) {
   `).join("");
 }
 
-function renderShenSha(items) {
+function renderShenSha(items, chart, fortune) {
   const list = document.querySelector("#shenShaList");
   const presentItems = items.filter((item) => item.present);
   if (!presentItems.length) {
     list.innerHTML = `<span class="muted">本盘未见当前系统收录的主要神煞。</span>`;
     return;
   }
+  const meta = getChartMeta(chart);
   list.innerHTML = presentItems.map((item) => {
     const targetText = [
       item.targets.stems.length ? `天干${item.targets.stems.join("/")}` : "",
       item.targets.branches.length ? `地支${item.targets.branches.join("/")}` : ""
     ].filter(Boolean).join(" · ");
     const hitText = item.present ? item.hits.join("、") : "未见";
+    const contextText = shenShaContextText(item, chart, meta, fortune);
     return `
       <article class="shen-item is-present">
         <div>
-          <strong>${item.name}</strong>
-          <span>${hitText}</span>
+          <strong>${escapeHtml(item.name)}</strong>
+          <span>${escapeHtml(hitText)}</span>
         </div>
-        <p>${targetText || "依命局组合判定"}。${item.note}</p>
+        <p>${escapeHtml(targetText || "依命局组合判定")}。${escapeHtml(contextText)}</p>
       </article>
     `;
   }).join("");
@@ -1349,7 +1465,7 @@ function runAnalysis({ save = true } = {}) {
   document.querySelector("#summaryText").textContent = `年柱${chart.pillars.year.label}，月柱${chart.pillars.month.label}，日柱${chart.pillars.day.label}，时柱${chart.pillars.hour.label}。日主为${chart.pillars.day.stem}${ELEMENT_OF_STEM[chart.pillars.day.stem]}。出生地${profile.place}，钟表时间${formatClockTime(birth.clockHour, birth.clockMinute)}，真太阳时约${formatClockTime(birth.hour, birth.minute)}（${formatCorrection(birth.correctionMinutes)}）。`;
   renderPillars(chart.pillars);
   renderElements(chart.elements);
-  renderShenSha(chart.shenSha);
+  renderShenSha(chart.shenSha, chart, fortune);
   renderAnalysis(analyze(chart, profile, fortune));
   renderDynamicPanels();
   if (save) saveCurrentRecord(profile, birth, chart);
