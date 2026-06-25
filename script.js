@@ -36,12 +36,33 @@ const PILLAR_MEANINGS = {
 };
 const TOPICS = {
   career: { label: "事业", scoreLabel: "事业", accent: "#d6aa59" },
+  study: { label: "学业", scoreLabel: "学业", accent: "#8bb6d8" },
   health: { label: "健康", scoreLabel: "健康", accent: "#4f8c78" },
   romance: { label: "桃花", scoreLabel: "桃花", accent: "#d88a8a" },
   wealth: { label: "财运", scoreLabel: "财运", accent: "#bfb7a3" }
 };
-const TOPIC_ORDER = ["career", "health", "romance", "wealth"];
+const TOPIC_ORDER = ["career", "study", "health", "romance", "wealth"];
 const STORAGE_KEY = "bazi-site.records.v1";
+const PLACES = {
+  "hong-kong": { name: "香港", longitude: 114.17, standardMeridian: 120 },
+  macau: { name: "澳门", longitude: 113.55, standardMeridian: 120 },
+  taipei: { name: "台北", longitude: 121.56, standardMeridian: 120 },
+  beijing: { name: "北京", longitude: 116.40, standardMeridian: 120 },
+  shanghai: { name: "上海", longitude: 121.47, standardMeridian: 120 },
+  guangzhou: { name: "广州", longitude: 113.26, standardMeridian: 120 },
+  shenzhen: { name: "深圳", longitude: 114.06, standardMeridian: 120 },
+  hangzhou: { name: "杭州", longitude: 120.16, standardMeridian: 120 },
+  nanjing: { name: "南京", longitude: 118.80, standardMeridian: 120 },
+  chengdu: { name: "成都", longitude: 104.07, standardMeridian: 120 },
+  chongqing: { name: "重庆", longitude: 106.55, standardMeridian: 120 },
+  wuhan: { name: "武汉", longitude: 114.31, standardMeridian: 120 },
+  xian: { name: "西安", longitude: 108.94, standardMeridian: 120 },
+  changsha: { name: "长沙", longitude: 112.94, standardMeridian: 120 },
+  kunming: { name: "昆明", longitude: 102.83, standardMeridian: 120 },
+  urumqi: { name: "乌鲁木齐", longitude: 87.62, standardMeridian: 120 },
+  harbin: { name: "哈尔滨", longitude: 126.64, standardMeridian: 120 },
+  shenyang: { name: "沈阳", longitude: 123.43, standardMeridian: 120 }
+};
 const appState = {
   selectedTopic: "career",
   expandedLuck: null,
@@ -98,6 +119,32 @@ const SHEN_SHA = [
     note: "主温和、包容与人情助力，利合作。"
   },
   {
+    name: "福星贵人",
+    calc: ({ dayStem }) => ({
+      甲: ["寅", "子"], 丙: ["寅", "子"], 戊: ["申"], 己: ["未"], 丁: ["亥"],
+      乙: ["丑", "卯"], 癸: ["丑", "卯"], 庚: ["午"], 辛: ["巳"], 壬: ["辰"]
+    })[dayStem],
+    note: "有福气、口碑和生活顺遂之象，宜珍惜善缘与稳定资源。"
+  },
+  {
+    name: "天官贵人",
+    calc: ({ dayStem }) => ({ 甲: ["未"], 乙: ["辰"], 丙: ["巳"], 丁: ["酉"], 戊: ["戌"], 己: ["卯"], 庚: ["亥"], 辛: ["申"], 壬: ["寅"], 癸: ["午"] })[dayStem],
+    note: "重职位、名誉、规则与被认可，适合走资质和组织路线。"
+  },
+  {
+    name: "天福贵人",
+    calc: ({ dayStem }) => ({ 甲: ["酉"], 乙: ["申"], 丙: ["子"], 丁: ["亥"], 戊: ["卯"], 己: ["寅"], 庚: ["午"], 辛: ["巳"], 壬: ["午"], 癸: ["巳"] })[dayStem],
+    note: "主生活助力、长辈缘和贵人扶持，适合稳中求进。"
+  },
+  {
+    name: "德秀贵人",
+    calc: ({ monthBranch }) => {
+      const stems = branchByGroup(monthBranch, { "寅午戌": "丙丁", "申子辰": "壬癸", "亥卯未": "甲乙", "巳酉丑": "庚辛" });
+      return stemTargets(stems[0] ? stems[0].split("") : []);
+    },
+    note: "有才华、审美和修养之象，适合把专业做得精致。"
+  },
+  {
     name: "文昌贵人",
     calc: ({ dayStem }) => ({ 甲: ["巳"], 乙: ["午"], 丙: ["申"], 丁: ["酉"], 戊: ["申"], 己: ["酉"], 庚: ["亥"], 辛: ["子"], 壬: ["寅"], 癸: ["卯"] })[dayStem],
     note: "重学习表达，利文字、策划、研究与考试。"
@@ -133,9 +180,24 @@ const SHEN_SHA = [
     note: "重体面、承载与资源配置，利稳健积累。"
   },
   {
+    name: "暗禄",
+    calc: ({ dayStem }) => ({ 甲: ["亥"], 乙: ["戌"], 丙: ["申"], 丁: ["未"], 戊: ["申"], 己: ["未"], 庚: ["巳"], 辛: ["辰"], 壬: ["寅"], 癸: ["丑"] })[dayStem],
+    note: "暗处有资源和机会，适合低调积累、长期经营。"
+  },
+  {
     name: "桃花",
     calc: ({ dayBranch }) => branchByGroup(dayBranch, { "申子辰": "酉", "寅午戌": "卯", "亥卯未": "子", "巳酉丑": "午" }),
     note: "人缘与审美较显，宜把吸引力用在沟通和作品上。"
+  },
+  {
+    name: "红艳",
+    calc: ({ dayStem }) => ({ 甲: ["午"], 乙: ["申"], 丙: ["寅"], 丁: ["未"], 戊: ["辰"], 己: ["辰"], 庚: ["戌"], 辛: ["酉"], 壬: ["子"], 癸: ["申"] })[dayStem],
+    note: "个人魅力、异性缘和表现力较强，也要避免情感选择过急。"
+  },
+  {
+    name: "流霞",
+    calc: ({ dayStem }) => ({ 甲: ["酉"], 乙: ["戌"], 丙: ["未"], 丁: ["申"], 戊: ["巳"], 己: ["午"], 庚: ["辰"], 辛: ["卯"], 壬: ["亥"], 癸: ["寅"] })[dayStem],
+    note: "情绪与人际波动较明显，感情和口舌事务宜谨慎。"
   },
   {
     name: "红鸾",
@@ -196,6 +258,11 @@ const SHEN_SHA = [
     note: "与疗愈、照护、健康意识有关。"
   },
   {
+    name: "天罗地网",
+    calc: () => ["辰", "戌"],
+    note: "容易感到受限或压力缠绕，遇事宜拆解问题、慢慢推进。"
+  },
+  {
     name: "空亡",
     calc: ({ dayCycleIndex }) => {
       const groups = [["戌", "亥"], ["申", "酉"], ["午", "未"], ["辰", "巳"], ["寅", "卯"], ["子", "丑"]];
@@ -234,10 +301,44 @@ function julianDayNumber(y, m, d) {
   return d + Math.floor((153 * mm + 2) / 5) + 365 * yy + Math.floor(yy / 4) - Math.floor(yy / 100) + Math.floor(yy / 400) - 32045;
 }
 
-function parseBirth(dateValue, timeValue) {
+function parseBirth(dateValue, timeValue, placeKey = "hong-kong") {
   const [year, month, day] = dateValue.split("-").map(Number);
   const [hour, minute] = timeValue.split(":").map(Number);
-  return { year, month, day, hour, minute };
+  const place = getPlace(placeKey);
+  const correctionMinutes = Math.round((place.longitude - place.standardMeridian) * 4);
+  const solarDate = new Date(year, month - 1, day, hour, minute + correctionMinutes);
+  return {
+    year: solarDate.getFullYear(),
+    month: solarDate.getMonth() + 1,
+    day: solarDate.getDate(),
+    hour: solarDate.getHours(),
+    minute: solarDate.getMinutes(),
+    clockYear: year,
+    clockMonth: month,
+    clockDay: day,
+    clockHour: hour,
+    clockMinute: minute,
+    placeKey,
+    place,
+    correctionMinutes
+  };
+}
+
+function getPlace(placeKey) {
+  return PLACES[placeKey] || PLACES["hong-kong"];
+}
+
+function formatClockTime(hour, minute) {
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
+function formatCorrection(minutes) {
+  if (minutes === 0) return "无修正";
+  const sign = minutes > 0 ? "加" : "减";
+  const abs = Math.abs(minutes);
+  const h = Math.floor(abs / 60);
+  const m = abs % 60;
+  return `${sign}${h ? `${h}小时` : ""}${m ? `${m}分钟` : ""}`;
 }
 
 function getBaziYear({ year, month, day }) {
@@ -387,6 +488,14 @@ function analyze(chart, profile, fortune) {
     {
       title: "大运流年提要",
       paragraphs: buildFortuneInsights(chart, fortune, meta)
+    },
+    {
+      title: "正缘与关系",
+      paragraphs: buildPartnerInsights(chart, profile, fortune, meta)
+    },
+    {
+      title: "职业方向",
+      paragraphs: buildCareerInsights(chart, fortune, meta)
     }
   ];
 }
@@ -429,7 +538,100 @@ function buildFortuneInsights(chart, fortune, meta) {
   return [
     `${fortune.directionText}，起运约${fortune.startAgeText}，按十年一步排列。${currentText}`,
     `大运像十年的底色，流年像当年的触发器。近年可重点看：${firstYears}`,
-    `若流年或大运出现参考喜用${meta.useful.join("、")}，通常更利主动布局；若反复触发命局偏旺或偏弱的一端，则宜先守节奏、补短板，再求突破。`
+    `本盘日主${meta.strength}，参考喜用为${meta.useful.join("、")}。看流年流月时，遇到喜用五行通常代表有可借之力；遇到命局已偏重的${meta.top}，容易把原来的主题放大，宜先守节奏、补短板，再求突破。`
+  ];
+}
+
+function buildPartnerInsights(chart, profile, fortune, meta) {
+  const spouseBranch = chart.pillars.day.branch;
+  const spouseElement = ELEMENT_OF_BRANCH[spouseBranch];
+  const spouseRole = relationToDay(meta.dayElement, spouseElement);
+  const partnerStar = profile.gender === "男" ? "财星" : profile.gender === "女" ? "官杀" : "伴侣星";
+  const partnerElement = profile.gender === "男" ? meta.wealth : profile.gender === "女" ? meta.officer : spouseElement;
+  const partnerStrength = chart.elements[partnerElement] || 0;
+  const shenNames = new Set(chart.shenSha.filter((item) => item.present).map((item) => item.name));
+  const hasRomance = ["桃花", "红鸾", "天喜"].filter((name) => shenNames.has(name));
+  const hasSolitude = ["孤辰", "寡宿", "华盖"].filter((name) => shenNames.has(name));
+  const currentAnnual = fortune.currentAnnual;
+  const annualRomanceScore = currentAnnual ? topicPillarScore("romance", currentAnnual.pillar, chart, meta) : 0;
+  const partnerType = {
+    木: "气质温和、有成长心和学习力，重视价值观与长期建设",
+    火: "表达直接、热情明亮，行动快，重视互动感和被看见",
+    土: "稳定务实、责任感强，重视安全感、生活秩序和承诺",
+    金: "原则清楚、审美与边界感较强，重视效率、专业和体面",
+    水: "聪明灵活、感受力强，重视沟通、空间和精神流动"
+  }[partnerElement];
+  const spouseHouseText = `日支夫妻宫为${spouseBranch}${spouseElement}，对日主呈${spouseRole}关系。它说明亲密关系中最容易被触发的是“${spouseRole}”主题：${roleRelationshipMeaning(spouseRole)}。`;
+  const starText = `${partnerStar}对应五行为${partnerElement}，在原局分值约${partnerStrength.toFixed(1)}。${partnerStrength >= 2.2 ? "伴侣缘分不算弱，关系往往会通过现实事务、合作场景或共同目标显现。" : "伴侣星不算特别旺，正缘更依赖主动经营、稳定社交圈和清晰表达需求。"}`;
+  const romanceText = hasRomance.length
+    ? `命中见${hasRomance.join("、")}，说明桃花与喜庆机缘较容易被触发；但真正稳定的关系仍要看夫妻宫和大运流年是否能承接。`
+    : `原局桃花类神煞不算突出，感情更偏慢热型，适合在稳定圈层、长期合作或共同兴趣中自然发展。`;
+  const cautionText = hasSolitude.length
+    ? `同时见${hasSolitude.join("、")}，容易有独处、精神要求高或慢热的一面。择偶时不宜只看一时吸引，更要看对方能否尊重节奏、沟通边界。`
+    : `关系阻滞不重，关键是避免在压力期把事业、家庭或情绪问题带入亲密沟通。`;
+  const timingText = currentAnnual
+    ? `${currentAnnual.year}${currentAnnual.pillar.label}流年${annualRomanceScore >= 16 ? "感情互动会更活跃，适合主动认识人或推进关系" : annualRomanceScore >= 8 ? "有机会遇到聊得来的人，适合多参加稳定社交" : annualRomanceScore >= 0 ? "感情节奏偏平稳，重点是把话说清楚、把关系养熟" : "容易有误会或距离感，感情上要少猜、多沟通"}。`
+    : `当前流年宜以稳定社交与清晰表达为主。`;
+  return [
+    spouseHouseText,
+    starText,
+    `正缘画像偏向：${partnerType}。适合选择能长期配合你的节奏、愿意一起建设生活秩序的人，而不是只凭短期新鲜感推进。`,
+    romanceText,
+    cautionText,
+    timingText
+  ];
+}
+
+function roleRelationshipMeaning(role) {
+  return {
+    比劫: "需要平等与空间，容易被独立、有主见的人吸引，也要避免互不相让",
+    印星: "需要理解、照顾与精神支持，适合能给你稳定感的人",
+    食伤: "重视表达、趣味和生活体验，关系中要留意说话锋芒",
+    财星: "重视现实照顾、资源安排与生活品质，关系会牵动金钱和承诺议题",
+    官杀: "重视责任、边界和承诺，容易被成熟、有担当或有规则感的人吸引"
+  }[role] || "需要结合现实互动观察";
+}
+
+function buildCareerInsights(chart, fortune, meta) {
+  const shenNames = new Set(chart.shenSha.filter((item) => item.present).map((item) => item.name));
+  const roles = Object.values(chart.pillars).flatMap((pillar) => [
+    relationToDay(meta.dayElement, ELEMENT_OF_STEM[pillar.stem]),
+    relationToDay(meta.dayElement, ELEMENT_OF_BRANCH[pillar.branch])
+  ]);
+  const roleCounts = roles.reduce((acc, role) => {
+    acc[role] = (acc[role] || 0) + 1;
+    return acc;
+  }, {});
+  const strongestRoles = Object.entries(roleCounts).sort((a, b) => b[1] - a[1]).slice(0, 2).map(([role]) => role);
+  const elementJobs = {
+    木: "教育培训、文化出版、咨询策划、产品经理、用户研究、园林环保、医养康复",
+    火: "传媒内容、品牌营销、设计视觉、互联网运营、演讲培训、餐饮娱乐、能源电子",
+    土: "地产建筑、工程项目、供应链、行政管理、人力资源、农业食品、风控合规",
+    金: "金融法务、审计风控、数据分析、硬件制造、医美器械、珠宝审美、制度管理",
+    水: "贸易物流、跨境业务、咨询顾问、数据流量、旅游交通、心理沟通、金融流动性业务"
+  };
+  const roleJobs = {
+    印星: "研究、教育、资质型岗位、专业顾问、知识管理、医药护理、后台支持",
+    食伤: "内容表达、设计创意、产品策划、销售转化、技术输出、培训讲师",
+    财星: "商业运营、销售、投资理财、供应链、客户经营、资源整合",
+    官杀: "管理、法务合规、公职体系、项目负责人、流程制度、组织协调",
+    比劫: "创业合伙、团队协作、社群运营、竞技型业务、需要强执行的岗位"
+  };
+  const shenCareer = [
+    shenNames.has("文昌贵人") ? "文昌入命，适合文字表达、学习考试、策划研究、知识型行业。" : "",
+    shenNames.has("将星") ? "将星入命，适合承担负责人、项目统筹、组织管理类角色。" : "",
+    shenNames.has("国印贵人") ? "国印入命，适合资质、制度、公信力、证照和管理背书强的行业。" : "",
+    shenNames.has("驿马") ? "驿马入命，适合跨区域、外勤、流动性强、出差或跨境相关工作。" : ""
+  ].filter(Boolean);
+  const currentLuck = fortune.currentLuck
+    ? `${fortune.currentLuck.pillar.label}大运对事业为：${topicPillarText("career", fortune.currentLuck.pillar, chart, meta, "当前大运")}`
+    : "当前尚未入大运，事业判断以原局月柱和日主强弱为主。";
+  return [
+    `事业结构看，命局中较明显的十神主题为${strongestRoles.join("、")}。${strongestRoles.map((role) => roleJobs[role]).join("；")}会比较容易发挥。`,
+    `从喜用五行看，当前参考喜用为${meta.useful.join("、")}，适合优先考虑：${meta.useful.map((element) => `${element}类：${elementJobs[element]}`).join("；")}。`,
+    shenCareer.length ? shenCareer.join("") : "命中事业类神煞不算集中，职业选择更要看五行喜用、技能积累和现实平台。",
+    currentLuck,
+    "总体建议：优先选择能长期累积专业、能形成作品或资质、且节奏可持续的方向。若要创业或转型，应选择与自身喜用五行相合、能把表达和资源承接起来的项目。"
   ];
 }
 
@@ -511,12 +713,15 @@ function getStartLuck(birth, forward) {
 }
 
 function getAge(birth, today) {
-  let age = today.getFullYear() - birth.year;
-  const birthdayThisYear = new Date(today.getFullYear(), birth.month - 1, birth.day);
+  const baseYear = birth.clockYear || birth.year;
+  const baseMonth = birth.clockMonth || birth.month;
+  const baseDay = birth.clockDay || birth.day;
+  let age = today.getFullYear() - baseYear;
+  const birthdayThisYear = new Date(today.getFullYear(), baseMonth - 1, baseDay);
   if (today < birthdayThisYear) age -= 1;
   const lastBirthdayYear = today < birthdayThisYear ? today.getFullYear() - 1 : today.getFullYear();
-  const lastBirthday = new Date(lastBirthdayYear, birth.month - 1, birth.day);
-  const nextBirthday = new Date(lastBirthdayYear + 1, birth.month - 1, birth.day);
+  const lastBirthday = new Date(lastBirthdayYear, baseMonth - 1, baseDay);
+  const nextBirthday = new Date(lastBirthdayYear + 1, baseMonth - 1, baseDay);
   const fraction = (today - lastBirthday) / (nextBirthday - lastBirthday);
   return Math.max(0, age + fraction);
 }
@@ -626,12 +831,35 @@ function calculateScores(chart, fortune) {
     95
   );
 
+  const study = clamp(
+    55 +
+    (has("文昌贵人") ? 14 : 0) +
+    (has("学堂") ? 12 : 0) +
+    (has("德秀贵人") ? 9 : 0) +
+    (has("太极贵人") ? 7 : 0) +
+    (has("国印贵人") ? 5 : 0) +
+    (currentRoles.includes("印星") ? 8 : 0) +
+    (currentRoles.includes("食伤") ? 5 : 0) +
+    luckUsefulBonus +
+    annualUsefulBonus +
+    topicPillarScore("study", fortune.currentAnnual?.pillar, chart, meta) -
+    (has("空亡") ? 4 : 0),
+    35,
+    98
+  );
+
   const scoreMap = {
     career: {
       key: "career",
       label: "事业",
       score: career,
       text: scoreText(career, `${annualTone}${has("将星", "文昌贵人", "国印贵人") ? "事业侧重组织、表达与专业背书" : "事业更依赖长期积累和阶段选择"}`)
+    },
+    study: {
+      key: "study",
+      label: "学业",
+      score: study,
+      text: scoreText(study, `${annualTone}${has("文昌贵人", "学堂", "德秀贵人") ? "学习、考试和表达能力更容易发挥" : "学习更依赖计划、复盘和长期坚持"}`)
     },
     health: {
       key: "health",
@@ -665,6 +893,7 @@ function topicPillarScore(topic, pillar, chart, meta = getChartMeta(chart)) {
     .some((element) => meta.useful.includes(element));
   const roleScore = {
     career: { 官杀: 10, 印星: 8, 食伤: 5, 财星: 4, 比劫: 2 },
+    study: { 印星: 12, 食伤: 8, 官杀: 5, 比劫: 2, 财星: -2 },
     health: { 印星: 8, 比劫: 5, 食伤: 2, 财星: -3, 官杀: -5 },
     romance: { 财星: 8, 官杀: 8, 食伤: 5, 比劫: 1, 印星: -2 },
     wealth: { 财星: 12, 食伤: 7, 官杀: 3, 印星: -2, 比劫: -5 }
@@ -867,31 +1096,98 @@ function renderAnnualDetail(annual, chart, meta, topic) {
 function topicPillarText(topic, pillar, chart, meta = getChartMeta(chart), scope = "阶段") {
   const relation = describePillarRelation(pillar, chart, meta);
   const score = topicPillarScore(topic, pillar, chart, meta);
-  const trend = score >= 16 ? "助力明显" : score >= 8 ? "有可用之机" : score >= 0 ? "平稳观察" : "需谨慎经营";
+  const trend = score >= 16 ? "比较顺，适合主动推进" : score >= 8 ? "有机会，可以认真把握" : score >= 0 ? "节奏平稳，适合稳扎稳打" : "阻力偏多，需要谨慎一点";
+  const stemElement = ELEMENT_OF_STEM[pillar.stem];
+  const branchElement = ELEMENT_OF_BRANCH[pillar.branch];
+  const stemRole = relationToDay(meta.dayElement, stemElement);
+  const branchRole = relationToDay(meta.dayElement, branchElement);
+  const usefulHit = [stemElement, branchElement].filter((element) => meta.useful.includes(element));
+  const pressureHit = [stemElement, branchElement].filter((element) => element === meta.top && !meta.useful.includes(element));
+  const baziContext = `此柱天干${pillar.stem}${stemElement}为${stemRole}，地支${pillar.branch}${branchElement}为${branchRole}；${usefulHit.length ? `触及喜用${[...new Set(usefulHit)].join("、")}，可借势主动推进` : `未明显触及喜用${meta.useful.join("、")}，更适合稳扎稳打`}${pressureHit.length ? `；同时放大原局偏重的${meta.top}，要防一端过旺` : ""}。`;
   const advice = {
     career: {
-      high: "适合争取职责、考试评审、项目推进和专业曝光。",
-      mid: "适合梳理流程、累积作品、稳住合作关系。",
+      high: `事业上适合争取职责、考试评审、项目推进和专业曝光，尤其利${careerDirectionByRoles([stemRole, branchRole])}。`,
+      mid: `事业适合梳理流程、累积作品、稳住合作关系，可把重点放在${careerDirectionByRoles([stemRole, branchRole])}。`,
       low: "事业上先稳边界，少做情绪化承诺，重要决定多复核。"
     },
+    study: {
+      high: `学业上适合备考、复盘、写作输出和考证进阶，重点放在${studyCueByRoles([stemRole, branchRole])}。`,
+      mid: `学习适合按计划推进，把知识点拆小，边学边做检查，重点看${studyCueByRoles([stemRole, branchRole])}。`,
+      low: "学习上先减少分心和拖延，固定作息与复习节奏，不要把任务都压到最后。"
+    },
     health: {
-      high: "有利恢复秩序，适合建立作息、运动和复查计划。",
-      mid: "健康重点在稳定节奏，少熬夜，饮食与压力管理要同步。",
-      low: "要减少硬扛和过劳，避免急躁、碰撞、炎症或旧疾反复。"
+      high: `健康有利恢复秩序，适合建立作息、运动和复查计划，重点照看${healthFocusByElements([stemElement, branchElement])}。`,
+      mid: `健康重点在稳定节奏，少熬夜，饮食与压力管理要同步，留意${healthFocusByElements([stemElement, branchElement])}。`,
+      low: `要减少硬扛和过劳，避免急躁、碰撞、炎症或旧疾反复，尤其留意${healthFocusByElements([stemElement, branchElement])}。`
     },
     romance: {
-      high: "人缘与情感互动较活跃，适合主动表达、修复关系和拓展社交。",
-      mid: "桃花以温和经营为主，慢热互动比强推进更合适。",
+      high: `人缘与情感互动较活跃，适合主动表达、修复关系和拓展社交；正缘观察重点是${partnerCueByRoles([stemRole, branchRole])}。`,
+      mid: `桃花以温和经营为主，慢热互动比强推进更合适；可多留意${partnerCueByRoles([stemRole, branchRole])}。`,
       low: "感情上宜少猜测、多沟通，避免把压力带进亲密关系。"
     },
     wealth: {
-      high: "财务转化机会较清楚，适合谈资源、预算、回款和稳定增收。",
-      mid: "财运重在执行和复盘，适合稳健配置与长期项目。",
+      high: `财务转化机会较清楚，适合谈资源、预算、回款和稳定增收，优先做${wealthCueByRoles([stemRole, branchRole])}。`,
+      mid: `财运重在执行和复盘，适合稳健配置与长期项目，重点看${wealthCueByRoles([stemRole, branchRole])}。`,
       low: "不宜重仓冒进，借贷、合伙和冲动消费都要留余地。"
     }
   }[topic];
   const line = score >= 16 ? advice.high : score >= 4 ? advice.mid : advice.low;
-  return `${scope}${trend}：${relation}${line}`;
+  return `${scope}${trend}：${baziContext}${line}`;
+}
+
+function careerDirectionByRoles(roles) {
+  const map = {
+    印星: "学习研究、资质证书、专业顾问、后台支持",
+    食伤: "表达输出、内容产品、设计策划、技术作品",
+    财星: "客户经营、商业转化、资源整合、预算回款",
+    官杀: "管理责任、制度流程、项目统筹、合规执行",
+    比劫: "团队协作、合伙创业、竞争执行、社群运营"
+  };
+  return [...new Set(roles.map((role) => map[role]).filter(Boolean))].join("与") || "稳健执行";
+}
+
+function studyCueByRoles(roles) {
+  const map = {
+    印星: "理解记忆、系统学习、教材和老师资源",
+    食伤: "表达输出、刷题复盘、写作展示",
+    财星: "实用技能、项目练习、把知识变成成果",
+    官杀: "考试规则、时间管理、证书目标",
+    比劫: "同伴监督、小组学习、竞争动力"
+  };
+  return [...new Set(roles.map((role) => map[role]).filter(Boolean))].join("、") || "稳定复习节奏";
+}
+
+function healthFocusByElements(elements) {
+  const map = {
+    木: "肝胆、筋骨、眼睛和情绪疏泄",
+    火: "心血管、睡眠、炎症和上火问题",
+    土: "脾胃、消化、代谢和湿重",
+    金: "呼吸道、皮肤、鼻喉和压力紧绷",
+    水: "肾水、泌尿、腰部、内分泌和寒湿"
+  };
+  return [...new Set(elements.map((element) => map[element]))].join("、");
+}
+
+function partnerCueByRoles(roles) {
+  const map = {
+    印星: "能给予理解、照顾与精神支持的人",
+    食伤: "表达轻松、有生活趣味、能一起创造体验的人",
+    财星: "务实可靠、愿意共同规划生活资源的人",
+    官杀: "成熟有担当、边界清楚、重承诺的人",
+    比劫: "独立有主见、能平等协作但也需要空间的人"
+  };
+  return [...new Set(roles.map((role) => map[role]).filter(Boolean))].join("，");
+}
+
+function wealthCueByRoles(roles) {
+  const map = {
+    印星: "知识变现、资质背书和长期积累",
+    食伤: "作品输出、内容转化和销售表达",
+    财星: "直接交易、客户资源和现金流管理",
+    官杀: "制度化收入、职位责任和稳定项目",
+    比劫: "团队合作、渠道共创和资源互换"
+  };
+  return [...new Set(roles.map((role) => map[role]).filter(Boolean))].join("、") || "稳健现金流";
 }
 
 function escapeHtml(value) {
@@ -903,20 +1199,10 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
-function fillSample() {
-  appState.activeRecordId = null;
-  document.querySelector("#userName").value = "林清和";
-  document.querySelector("#gender").value = "女";
-  document.querySelector("#birthPlace").value = "香港";
-  document.querySelector("#birthDate").value = "1994-08-18";
-  document.querySelector("#birthTime").value = "09:28";
-  renderRecordList();
-}
-
 function clearForm() {
   document.querySelector("#userName").value = "";
   document.querySelector("#gender").value = "男";
-  document.querySelector("#birthPlace").value = "";
+  document.querySelector("#birthPlace").value = "hong-kong";
   document.querySelector("#birthDate").value = "";
   document.querySelector("#birthTime").value = "";
   appState.activeRecordId = null;
@@ -937,7 +1223,7 @@ function resetResults() {
       <small>待生成</small>
     </article>
   `).join("");
-  document.querySelector("#scorePanel").innerHTML = `<p class="muted">排盘后显示桃花、事业、财运、健康评分。</p>`;
+  document.querySelector("#scorePanel").innerHTML = `<p class="muted">排盘后显示事业、学业、健康、桃花、财运评分。</p>`;
   document.querySelector("#elementBars").innerHTML = "";
   document.querySelector("#shenShaList").innerHTML = `<span class="muted">待生成</span>`;
   document.querySelector("#analysisText").innerHTML = `<p>排盘后将从日主、五行偏重、神煞意象三个角度给出简要分析。</p>`;
@@ -945,13 +1231,16 @@ function resetResults() {
 }
 
 function getFormPayload() {
+  const placeKey = document.querySelector("#birthPlace").value || "hong-kong";
+  const place = getPlace(placeKey);
   return {
     profile: {
       name: document.querySelector("#userName").value.trim(),
       gender: document.querySelector("#gender").value,
-      place: document.querySelector("#birthPlace").value.trim()
+      place: place.name,
+      placeKey
     },
-    birth: parseBirth(document.querySelector("#birthDate").value, document.querySelector("#birthTime").value),
+    birth: parseBirth(document.querySelector("#birthDate").value, document.querySelector("#birthTime").value, placeKey),
     date: document.querySelector("#birthDate").value,
     time: document.querySelector("#birthTime").value
   };
@@ -960,9 +1249,16 @@ function getFormPayload() {
 function fillFormFromRecord(record) {
   document.querySelector("#userName").value = record.profile?.name || "";
   document.querySelector("#gender").value = record.profile?.gender || "男";
-  document.querySelector("#birthPlace").value = record.profile?.place || "";
+  document.querySelector("#birthPlace").value = record.profile?.placeKey && PLACES[record.profile.placeKey]
+    ? record.profile.placeKey
+    : placeKeyFromName(record.profile?.place);
   document.querySelector("#birthDate").value = record.date || "";
   document.querySelector("#birthTime").value = record.time || "";
+}
+
+function placeKeyFromName(name) {
+  const found = Object.entries(PLACES).find(([, place]) => place.name === name);
+  return found ? found[0] : "hong-kong";
 }
 
 function loadRecords() {
@@ -1050,7 +1346,7 @@ function runAnalysis({ save = true } = {}) {
     : null;
   const labels = Object.values(chart.pillars).map((p) => p.label).join(" · ");
   document.querySelector("#summaryTitle").textContent = `${profile.name || "命主"}：${labels}`;
-  document.querySelector("#summaryText").textContent = `年柱${chart.pillars.year.label}，月柱${chart.pillars.month.label}，日柱${chart.pillars.day.label}，时柱${chart.pillars.hour.label}。日主为${chart.pillars.day.stem}${ELEMENT_OF_STEM[chart.pillars.day.stem]}。`;
+  document.querySelector("#summaryText").textContent = `年柱${chart.pillars.year.label}，月柱${chart.pillars.month.label}，日柱${chart.pillars.day.label}，时柱${chart.pillars.hour.label}。日主为${chart.pillars.day.stem}${ELEMENT_OF_STEM[chart.pillars.day.stem]}。出生地${profile.place}，钟表时间${formatClockTime(birth.clockHour, birth.clockMinute)}，真太阳时约${formatClockTime(birth.hour, birth.minute)}（${formatCorrection(birth.correctionMinutes)}）。`;
   renderPillars(chart.pillars);
   renderElements(chart.elements);
   renderShenSha(chart.shenSha);
@@ -1058,8 +1354,6 @@ function runAnalysis({ save = true } = {}) {
   renderDynamicPanels();
   if (save) saveCurrentRecord(profile, birth, chart);
 }
-
-document.querySelector("#sampleBtn").addEventListener("click", fillSample);
 
 document.querySelector("#newRecordBtn").addEventListener("click", clearForm);
 
@@ -1134,5 +1428,4 @@ document.querySelector("#birthForm").addEventListener("submit", (event) => {
 
 loadRecords();
 renderRecordList();
-fillSample();
-runAnalysis({ save: false });
+resetResults();

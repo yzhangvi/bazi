@@ -14,8 +14,34 @@
         <div class="hero__shade" aria-hidden="true"></div>
         <div class="hero__content">
           <p class="kicker">BaZi Shen Sha</p>
+          <span class="fun-badge">仅供娱乐参考</span>
           <h1>玄枢命盘</h1>
           <p class="intro">输入生辰资料，生成四柱、五行与常见神煞简析。</p>
+        </div>
+      </section>
+
+      <section class="feature-intro" aria-label="功能简介">
+        <div class="feature-intro__inner">
+          <article>
+            <span>01</span>
+            <h2>八字排盘</h2>
+            <p>按出生日期、时间、性别与出生地生成年、月、日、时四柱，并结合出生地经度近似换算真太阳时。</p>
+          </article>
+          <article>
+            <span>02</span>
+            <h2>神煞与五行</h2>
+            <p>只展示命盘中实际命中的神煞，结合落在年、月、日、时不同位置进行解释。</p>
+          </article>
+          <article>
+            <span>03</span>
+            <h2>大运流年</h2>
+            <p>可切换事业、学业、健康、桃花、财运，展开大运看十年流年，再展开流年看十二流月。</p>
+          </article>
+          <article>
+            <span>04</span>
+            <h2>多人记录</h2>
+            <p>每次排盘会自动保存到本机浏览器，可新增多人、切换记录、继续查看不同维度分析。</p>
+          </article>
         </div>
       </section>
 
@@ -25,9 +51,12 @@
             <h2>生辰资料</h2>
             <div class="head-actions">
               <button class="ghost-button" type="button" id="newRecordBtn">新增</button>
-              <button class="ghost-button" type="button" id="sampleBtn">示例</button>
             </div>
           </div>
+          <details class="form-help">
+            <summary>使用说明</summary>
+            <p>第一次填写直接输入资料后点“排盘分析”。要添加另一个人，先点“新增”，再填写新资料；分析完成会自动保存到下方记录。点保存记录可切换查看。</p>
+          </details>
 
           <label class="field">
             <span>姓名</span>
@@ -46,7 +75,30 @@
 
             <label class="field">
               <span>出生地</span>
-              <input id="birthPlace" name="birthPlace" type="text" placeholder="如：香港" />
+              <select id="birthPlace" name="birthPlace" required>
+                <optgroup label="港澳台">
+                  <option value="hong-kong">香港</option>
+                  <option value="macau">澳门</option>
+                  <option value="taipei">台北</option>
+                </optgroup>
+                <optgroup label="中国大陆">
+                  <option value="beijing">北京</option>
+                  <option value="shanghai">上海</option>
+                  <option value="guangzhou">广州</option>
+                  <option value="shenzhen">深圳</option>
+                  <option value="hangzhou">杭州</option>
+                  <option value="nanjing">南京</option>
+                  <option value="chengdu">成都</option>
+                  <option value="chongqing">重庆</option>
+                  <option value="wuhan">武汉</option>
+                  <option value="xian">西安</option>
+                  <option value="changsha">长沙</option>
+                  <option value="kunming">昆明</option>
+                  <option value="urumqi">乌鲁木齐</option>
+                  <option value="harbin">哈尔滨</option>
+                  <option value="shenyang">沈阳</option>
+                </optgroup>
+              </select>
             </label>
           </div>
 
@@ -66,7 +118,7 @@
             <span>排盘分析</span>
           </button>
 
-          <p class="notice">民俗文化参考版：节气采用近似切换，专业排盘请结合精确历法与真太阳时。</p>
+          <p class="notice">仅供娱乐参考：本工具为民俗文化体验版，节气和真太阳时均采用近似算法，不作为现实决策依据。</p>
 
           <section class="record-panel" aria-label="已保存命盘">
             <div class="record-panel__head">
@@ -111,10 +163,10 @@
 
           <section class="panel">
             <div class="panel__head">
-              <h2>四项评分</h2>
+              <h2>五项评分</h2>
             </div>
             <div id="scorePanel" class="score-grid">
-              <p class="muted">排盘后显示桃花、事业、财运、健康评分。</p>
+              <p class="muted">排盘后显示事业、学业、健康、桃花、财运评分。</p>
             </div>
           </section>
 
@@ -150,6 +202,7 @@
               <h2>大运流年</h2>
               <div id="topicTabs" class="topic-tabs" role="tablist" aria-label="分析维度">
                 <button type="button" class="topic-tab is-active" data-topic="career">事业</button>
+                <button type="button" class="topic-tab" data-topic="study">学业</button>
                 <button type="button" class="topic-tab" data-topic="health">健康</button>
                 <button type="button" class="topic-tab" data-topic="romance">桃花</button>
                 <button type="button" class="topic-tab" data-topic="wealth">财运</button>
